@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mecánico Chat · Prueba</title>
+<style>
+  :root { --c:#1F4E5F; --g:#B8860B; --bg:#f4f6f7; --ok:#2e7d32; --warn:#b26a00; --bad:#c62828; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:#1b1b1b; }
+  header { background:var(--c); color:#fff; padding:14px 16px; }
+  header h1 { margin:0; font-size:18px; } header p { margin:2px 0 0; font-size:12px; opacity:.85; }
+  main { max-width:720px; margin:0 auto; padding:12px; }
+  .card { background:#fff; border-radius:12px; padding:14px; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  h2 { font-size:15px; margin:0 0 10px; color:var(--c); }
+  button, .btn { appearance:none; border:0; border-radius:10px; padding:12px 14px; font-size:15px; font-weight:600; cursor:pointer; }
+  .primary { background:var(--c); color:#fff; width:100%; }
+  .sec { background:#e3edf0; color:var(--c); }
+  .row { display:flex; gap:8px; } .row > * { flex:1; }
+  input[type=text] { width:100%; padding:12px; font-size:17px; border:1px solid #c9d3d6; border-radius:10px; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+  #foto { display:none; }
+  #preview { max-width:100%; border-radius:10px; margin-top:10px; display:none; }
+  .bar { height:8px; background:#e3edf0; border-radius:4px; overflow:hidden; margin-top:10px; display:none; }
+  .bar > div { height:100%; width:0; background:var(--g); transition:width .2s; }
+  .muted { color:#666; font-size:12px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .chip { background:#fff7e6; border:1px solid var(--g); color:#5a4300; padding:8px 10px; border-radius:20px; font-size:13px; font-weight:600; cursor:pointer; }
+  .ex { background:#eef3f4; border:0; color:var(--c); padding:8px 10px; border-radius:20px; font-size:12px; cursor:pointer; }
+  .sum { padding:10px 12px; border-radius:10px; margin-bottom:10px; font-size:14px; }
+  .sum.ok { background:#e8f5e9; } .sum.warn { background:#fff3e0; } .sum.bad { background:#ffebee; }
+  .moto { border:1px solid #e1e7e9; border-radius:10px; padding:10px 12px; margin-bottom:10px; }
+  .moto h3 { margin:0 0 6px; font-size:16px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  td { padding:5px 4px; border-top:1px solid #eef1f2; vertical-align:top; } td:first-child { color:#555; width:42%; }
+  .tag { display:inline-block; font-size:11px; padding:2px 8px; border-radius:10px; margin-left:4px; }
+  .VIGENTE { background:#e8f5e9; color:var(--ok); } .INACTIVO { background:#ffebee; color:var(--bad); }
+  details { margin-top:8px; } summary { cursor:pointer; color:var(--c); font-size:13px; }
+  pre { white-space:pre-wrap; font-size:12px; background:#f7f7f7; padding:8px; border-radius:8px; }
+  footer { text-align:center; font-size:11px; color:#777; padding:16px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Mecánico Chat · Prueba</h1>
+  <p>Identifica la moto por chasis o número de motor · Base ANT de motos homologadas</p>
+</header>
+<main>
+  <section class="card">
+    <h2>1 · Foto</h2>
+    <label class="btn primary" for="foto" style="display:block;text-align:center">Tomar foto del chasis, motor o matrícula</label>
+    <input id="foto" type="file" accept="image/*" capture="environment">
+    <p class="muted">Acerca la cámara al número, con buena luz y sin reflejos. La foto se lee en tu celular: no se sube a ningún servidor.</p>
+    <img id="preview" alt="foto">
+    <div class="bar" id="bar"><div></div></div>
+    <p id="ocrEstado" class="muted"></p>
+    <div id="detectados"></div>
+    <details id="ocrTexto" style="display:none"><summary>Ver texto leído</summary><pre></pre></details>
+  </section>
+
+  <section class="card">
+    <h2>2 · O escríbelo</h2>
+    <input id="entrada" type="text" placeholder="Ej. LHJYCLLA1RB345678 o 162FMJ12345" autocomplete="off" autocapitalize="characters">
+    <div class="row">
+      <button class="primary" id="btnChasis">Buscar chasis</button>
+      <button class="sec" id="btnMotor">Buscar motor</button>
+    </div>
+    <div class="chips" style="margin-top:10px">
+      <span class="muted" style="width:100%">Ejemplos para probar:</span>
+      <button class="ex" data-t="chasis" data-v="LHJYCLLA1RB345678">Dukare 200</button>
+      <button class="ex" data-t="chasis" data-v="LXYPCKL01R4567890">Shineray XY150-15</button>
+      <button class="ex" data-t="chasis" data-v="LEAPCK031R4567890">Daytona Workforce 150</button>
+      <button class="ex" data-t="chasis" data-v="8LMM165N2RMA34567">Thunder Mamut (Ecuador)</button>
+      <button class="ex" data-t="motor" data-v="162FMJ12345678">Motor 162FMJ</button>
+    </div>
+  </section>
+
+  <section class="card" id="resCard" style="display:none">
+    <h2>Resultado</h2>
+    <div id="res"></div>
+    <button class="sec" id="btnCopiar" style="width:100%;margin-top:6px">Copiar resultado</button>
+  </section>
+</main>
+<footer>
+  Fuente: Listado de Vehículos Homologados ANT, 24-ago-2026 (información pública). Prueba interna, sin datos personales.<br>
+  El año sale del carácter 10 del chasis y el diámetro del código de motor: ambos son "probables".
+</footer>
+
+<script src="data/motos.js"></script>
+<script src="core.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+(function () {
+  var base = MecCore.cargar(window.MOTOS);
+  var $ = function (id) { return document.getElementById(id); };
+  var textoCopiar = "";
+  var worker = null;
+
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function fila(k, v) { return (v === null || v === undefined || v === "" || v === "N/A") ? "" : "<tr><td>" + esc(k) + "</td><td>" + esc(v) + "</td></tr>"; }
+  function mostrar(html) { $("res").innerHTML = html; $("resCard").style.display = "block"; $("resCard").scrollIntoView({ behavior: "smooth" }); }
+
+  function verChasis(valor) {
+    var r = MecCore.buscarChasis(base, valor);
+    if (!r.ok) { mostrar('<div class="sum bad">' + esc(r.error) + "</div>"); return; }
+    var c = r.coincidencias, h = "", txt = [];
+    var cab = "<b>Chasis:</b> " + esc(r.chasis) + (r.completo ? "" : " (incompleto)") +
+      (r.anio ? "<br><b>Año probable:</b> " + r.anio : "") +
+      "<br><b>Código de fábrica " + esc(r.wmi) + ":</b> " + (r.marcasWmi.length ? "lo usan " + esc(r.marcasWmi.join(", ")) : "no está en la base");
+    txt.push("Chasis: " + r.chasis + (r.anio ? " · Año probable: " + r.anio : ""));
+    if (!c.length) {
+      h += '<div class="sum bad">' + cab + "<br><br><b>No encontré este chasis en la base.</b> Revisa los caracteres o prueba con la foto de la matrícula.</div>";
+      txt.push("Sin coincidencias en la base ANT.");
+    } else {
+      var msg, cls;
+      if (c.length === 1) { msg = "Un solo modelo coincide."; cls = "ok"; }
+      else if (r.marcas.length === 1) { msg = c.length + " modelos de " + esc(r.marcas[0]) + " comparten este chasis (" + r.cilindrajes.join(" / ") + " cc). Pregunta al cliente cuál es."; cls = "warn"; }
+      else { msg = "Este mismo chasis se vende con " + r.marcas.length + " marcas: <b>" + esc(r.marcas.join(", ")) + "</b>. Es la misma plataforma: los repuestos de motor y chasis deberían servir entre ellas."; cls = "warn"; }
+      h += '<div class="sum ' + cls + '">' + cab + "<br><br>" + msg + "</div>";
+      c.forEach(function (m) {
+        var est = m.estados.map(function (e) { return '<span class="tag ' + e + '">' + e + "</span>"; }).join("");
+        h += '<div class="moto"><h3>' + esc(m.marca) + " " + esc(m.modelo) + est + "</h3><table>" +
+          fila("Cilindraje", m.cc != null ? m.cc + " cc" : "") + fila("Potencia (eléctrica)", m.kw != null ? m.kw + " kW" : "") +
+          fila("Combustible", m.combustible) + fila("Transmisión", m.transmision) + fila("Tipo", m.tipo) +
+          fila("Subcategoría", m.subcategoria) + fila("Versión", m.version) + fila("Descripción ANT", m.descripcion) +
+          fila("Fecha límite de embarque", m.fechas.join(", ")) + fila("VIN genérico", m.vin) +
+          fila("Representante en Ecuador", m.representante) + "</table></div>";
+        txt.push("- " + m.marca + " " + m.modelo + " · " + (m.cc != null ? m.cc + " cc" : (m.kw != null ? m.kw + " kW" : "")) + " · " + m.transmision + " · " + m.estados.join("/"));
+      });
+    }
+    if (c.length) h += '<p class="muted">INACTIVO = ya no se homologa para importar nuevas; las motos que ya circulan siguen siendo válidas.</p>';
+    if (r.avisos.length) h += '<p class="muted">' + r.avisos.map(esc).join("<br>") + "</p>";
+    textoCopiar = txt.join("\n");
+    mostrar(h);
+  }
+
+  function verMotor(valor) {
+    var r = MecCore.leerMotor(valor);
+    if (!r.ok) { mostrar('<div class="sum bad">' + esc(r.error) + "<br>Número leído: " + esc(r.numero) + "</div>"); textoCopiar = ""; return; }
+    mostrar('<div class="sum ok"><b>Número de motor:</b> ' + esc(r.numero) + "<br><b>Código de motor:</b> " + esc(r.codigo) + "</div>" +
+      '<div class="moto"><table>' + fila("Cilindros", r.cilindros) + fila("Diámetro del cilindro (probable)", r.diametro + " mm") +
+      fila("Repuestos compatibles", "Se mostrarán cuando cargues el catálogo de cilindros") + "</table></div>" +
+      '<p class="muted">' + esc(r.nota) + "</p>");
+    textoCopiar = "Motor " + r.numero + " · código " + r.codigo + " · " + r.cilindros + " cilindro · diámetro probable " + r.diametro + " mm";
+  }
+
+  $("btnChasis").onclick = function () { verChasis($("entrada").value); };
+  $("btnMotor").onclick = function () { verMotor($("entrada").value); };
+  $("entrada").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { /^\d/.test(this.value.trim()) ? verMotor(this.value) : verChasis(this.value); }
+  });
+  Array.prototype.forEach.call(document.querySelectorAll(".ex"), function (b) {
+    b.onclick = function () { $("entrada").value = b.dataset.v; b.dataset.t === "motor" ? verMotor(b.dataset.v) : verChasis(b.dataset.v); };
+  });
+  $("btnCopiar").onclick = function () {
+    if (!textoCopiar) return;
+    (navigator.clipboard ? navigator.clipboard.writeText(textoCopiar) : Promise.reject()).then(
+      function () { $("btnCopiar").textContent = "Copiado"; setTimeout(function () { $("btnCopiar").textContent = "Copiar resultado"; }, 1500); },
+      function () { prompt("Copia el resultado:", textoCopiar); });
+  };
+
+  // ---------- Foto + OCR ----------
+  function prepararImagen(file) {
+    return new Promise(function (ok, fail) {
+      var img = new Image();
+      img.onload = function () {
+        var max = 1800, s = Math.min(1, max / Math.max(img.width, img.height));
+        var cv = document.createElement("canvas");
+        cv.width = Math.round(img.width * s); cv.height = Math.round(img.height * s);
+        var cx = cv.getContext("2d");
+        cx.drawImage(img, 0, 0, cv.width, cv.height);
+        var d = cx.getImageData(0, 0, cv.width, cv.height), p = d.data, min = 255, mx = 0, i, g;
+        for (i = 0; i < p.length; i += 4) { g = 0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2]; p[i] = g; if (g < min) min = g; if (g > mx) mx = g; }
+        var k = 255 / Math.max(1, mx - min);
+        for (i = 0; i < p.length; i += 4) { g = (p[i] - min) * k; p[i] = p[i + 1] = p[i + 2] = g; }
+        cx.putImageData(d, 0, 0);
+        URL.revokeObjectURL(img.src);
+        ok(cv);
+      };
+      img.onerror = fail;
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  function progreso(v) { $("bar").style.display = "block"; $("bar").firstElementChild.style.width = Math.round(v * 100) + "%"; }
+
+  $("foto").addEventListener("change", function () {
+    var f = this.files && this.files[0];
+    if (!f) return;
+    $("preview").src = URL.createObjectURL(f); $("preview").style.display = "block";
+    $("detectados").innerHTML = ""; $("ocrTexto").style.display = "none";
+    $("ocrEstado").textContent = "Preparando lector (la primera vez tarda unos segundos)...";
+    progreso(0.05);
+    prepararImagen(f).then(function (canvas) {
+      var listo = worker ? Promise.resolve(worker) : Tesseract.createWorker("eng", 1, {
+        logger: function (m) { if (m.status === "recognizing text") { progreso(0.2 + 0.8 * m.progress); $("ocrEstado").textContent = "Leyendo foto... " + Math.round(m.progress * 100) + "%"; } }
+      }).then(function (w) { worker = w; return w.setParameters({ tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-:. ", preserve_interword_spaces: "1" }).then(function () { return w; }); });
+      return listo.then(function (w) { return w.recognize(canvas); });
+    }).then(function (res) {
+      progreso(1);
+      var texto = res.data.text || "";
+      $("ocrTexto").style.display = "block"; $("ocrTexto").querySelector("pre").textContent = texto;
+      var cand = MecCore.candidatosOCR(base, texto);
+      var buenos = cand.chasis.filter(function (c) { return c.resultados > 0; });
+      var h = "";
+      if (buenos.length) {
+        h += '<p class="muted">Chasis detectado:</p><div class="chips">' + buenos.map(function (c) { return '<span class="chip" data-t="chasis" data-v="' + esc(c.texto) + '">' + esc(c.texto) + "</span>"; }).join("") + "</div>";
+      } else if (cand.chasis.length) {
+        h += '<p class="muted">No encontré un chasis válido. Toca uno para corregirlo a mano:</p><div class="chips">' + cand.chasis.slice(0, 3).map(function (c) { return '<span class="chip" data-t="editar" data-v="' + esc(c.texto) + '">' + esc(c.texto) + "</span>"; }).join("") + "</div>";
+      }
+      if (cand.motores.length) {
+        h += '<p class="muted">Número de motor detectado:</p><div class="chips">' + cand.motores.map(function (m) { return '<span class="chip" data-t="motor" data-v="' + esc(m) + '">' + esc(m) + "</span>"; }).join("") + "</div>";
+      }
+      if (!h) h = '<p class="muted">No pude leer un número. Prueba otra foto más cerca o escríbelo abajo.</p>';
+      $("detectados").innerHTML = h;
+      $("ocrEstado").textContent = "Listo. Toca el número correcto (o corrígelo abajo).";
+      Array.prototype.forEach.call($("detectados").querySelectorAll(".chip"), function (ch) {
+        ch.onclick = function () {
+          $("entrada").value = ch.dataset.v;
+          if (ch.dataset.t === "chasis") verChasis(ch.dataset.v);
+          else if (ch.dataset.t === "motor") verMotor(ch.dataset.v);
+          else $("entrada").focus();
+        };
+      });
+      if (buenos.length === 1 && !cand.motores.length) verChasis(buenos[0].texto);
+    }).catch(function (e) {
+      $("ocrEstado").textContent = "No se pudo leer la foto (" + (e && e.message ? e.message : e) + "). Escribe el número abajo.";
+    });
+  });
+})();
+</script>
+</body>
+</html>
